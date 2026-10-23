@@ -1,15 +1,17 @@
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-
-// Sustituye estos valores por los de tu proyecto en Supabase (Settings > API).
-const SUPABASE_URL = "https://YOUR_PROJECT_ID.supabase.co";
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
-const LOGIN_REDIRECT = new URL("./index.html", window.location.href).href;
+const SUPABASE_URL = "https://fzgkaolxngitwlatsusf.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6Z2thb2x4bmdpdHdsYXRzdXNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI2OTE5MDAsImV4cCI6MjEwODI2NzkwMH0.l_l4MV9Scu7PTZLztGam8DP7HGRCh93fCosA4R3m5P4";
+const SUPABASE_STORAGE_KEY = "sb-fzgkaolxngitwlatsusf-auth-token";
+const CFT_URL = "https://cubanfashioner-del.github.io/CFT-sitio-oficial/";
+const PASSWORD_RESET_REDIRECT = "https://cubanfashioner-del.github.io/Login/html/login.html";
+const REMEMBER_PREFERENCE_KEY = "cft-auth-remember";
 
 const form = document.querySelector("#login-form");
+const emailField = document.querySelector("#email-field");
 const emailInput = document.querySelector("#email");
 const passwordInput = document.querySelector("#password");
 const confirmPasswordField = document.querySelector("#confirm-password-field");
 const confirmPasswordInput = document.querySelector("#confirm-password");
+const confirmPasswordLabel = confirmPasswordField.querySelector("label");
 const rememberInput = document.querySelector("#remember-me");
 const rememberOption = document.querySelector(".remember-option");
 const submitButton = document.querySelector("#login-submit");
@@ -18,7 +20,6 @@ const message = document.querySelector("#login-message");
 const passwordToggle = document.querySelector("#password-toggle");
 const forgotPasswordLink = document.querySelector("#forgot-password");
 const accountPrompt = document.querySelector("#account-prompt");
-const accountToggle = document.querySelector("#account-toggle");
 const themeButton = document.querySelector("#theme-toggle");
 const themeLabel = document.querySelector("#theme-toggle-label");
 const themeColor = document.querySelector('meta[name="theme-color"]');
@@ -26,9 +27,17 @@ const currentYear = document.querySelector("#current-year");
 
 let supabaseClient = null;
 let clientPersistence = null;
+let createClientPromise = null;
 let isRegisterMode = false;
+let isRecoveryMode = false;
 
 currentYear.textContent = String(new Date().getFullYear());
+
+try {
+  rememberInput.checked = localStorage.getItem(REMEMBER_PREFERENCE_KEY) === "true";
+} catch (error) {
+  console.warn("No se pudo leer la preferencia de sesión.", error);
+}
 
 function setMessage(text, state = "info") {
   message.textContent = text;
@@ -42,35 +51,62 @@ function setLoading(isLoading, label = "Iniciar sesión") {
   submitLabel.textContent = isLoading ? "Procesando…" : label;
 }
 
-function updateAccountMode(registerMode) {
+function getSubmitLabel() {
+  if (isRecoveryMode) return "Guardar contraseña";
+  return isRegisterMode ? "Crear cuenta" : "Iniciar sesión";
+}
+
+function updateAccountMode(registerMode, recoveryMode = false) {
   isRegisterMode = registerMode;
-  document.querySelector("#login-title").textContent = registerMode ? "Crear cuenta" : "Iniciar sesión";
-  document.querySelector(".login-card-kicker").textContent = registerMode ? "Únete a CFT" : "Bienvenido de vuelta";
-  document.querySelector(".login-card-heading p").textContent = registerMode
-    ? "Crea tu cuenta para acceder a tu espacio de cliente."
-    : "Ingresa tus datos para acceder a tu cuenta.";
-  submitLabel.textContent = registerMode ? "Crear cuenta" : "Iniciar sesión";
-  accountPrompt.innerHTML = registerMode
-    ? '¿Ya tienes una cuenta? <a href="#iniciar-sesion" id="account-toggle">Inicia sesión</a>'
-    : '¿Aún no tienes cuenta? <a href="#registrarse" id="account-toggle">Regístrate</a>';
-  confirmPasswordField.hidden = !registerMode;
-  confirmPasswordInput.disabled = !registerMode;
-  confirmPasswordInput.required = registerMode;
-  passwordInput.minLength = registerMode ? 6 : 0;
-  passwordInput.autocomplete = registerMode ? "new-password" : "current-password";
-  forgotPasswordLink.hidden = registerMode;
-  rememberOption.hidden = registerMode;
+  isRecoveryMode = recoveryMode;
+  const passwordSetupMode = registerMode || recoveryMode;
+
+  document.querySelector("#login-title").textContent = recoveryMode
+    ? "Crear nueva contraseña"
+    : registerMode ? "Crear cuenta" : "Iniciar sesión";
+  document.querySelector(".login-card-kicker").textContent = recoveryMode
+    ? "Recuperación de cuenta"
+    : registerMode ? "Únete a CFT" : "Bienvenido de vuelta";
+  document.querySelector(".login-card-heading p").textContent = recoveryMode
+    ? "Elige una contraseña nueva para tu cuenta."
+    : registerMode
+      ? "Crea tu cuenta para acceder a tu espacio de cliente."
+      : "Ingresa tus datos para acceder a tu cuenta.";
+  submitLabel.textContent = getSubmitLabel();
+  accountPrompt.innerHTML = recoveryMode
+    ? '¿Ya no necesitas cambiar la contraseña? <a href="#iniciar-sesion" id="account-toggle">Volver al inicio de sesión</a>'
+    : registerMode
+      ? '¿Ya tienes una cuenta? <a href="#iniciar-sesion" id="account-toggle">Inicia sesión</a>'
+      : '¿Aún no tienes cuenta? <a href="#registrarse" id="account-toggle">Regístrate</a>';
+  emailField.hidden = recoveryMode;
+  emailInput.disabled = recoveryMode;
+  emailInput.required = !recoveryMode;
+  confirmPasswordLabel.textContent = recoveryMode ? "Confirmar nueva contraseña" : "Confirmar contraseña";
+  confirmPasswordField.hidden = !passwordSetupMode;
+  confirmPasswordInput.disabled = !passwordSetupMode;
+  confirmPasswordInput.required = passwordSetupMode;
+  passwordInput.minLength = passwordSetupMode ? 6 : 0;
+  passwordInput.autocomplete = passwordSetupMode ? "new-password" : "current-password";
+  forgotPasswordLink.hidden = passwordSetupMode;
+  rememberOption.hidden = passwordSetupMode;
   setMessage("");
 }
 
-function getSupabaseClient(rememberSession) {
-  if (!SUPABASE_URL.startsWith("https://") ||
-      SUPABASE_URL.includes("YOUR_PROJECT_ID") ||
-      SUPABASE_ANON_KEY === "YOUR_SUPABASE_ANON_KEY") {
+async function getSupabaseClient(rememberSession) {
+  if (!SUPABASE_URL.startsWith("https://") || !SUPABASE_ANON_KEY) {
     throw new Error("CONFIGURATION");
   }
 
   if (!supabaseClient || clientPersistence !== rememberSession) {
+    if (!createClientPromise) {
+      createClientPromise = import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm")
+        .then(({ createClient }) => createClient)
+        .catch((error) => {
+          createClientPromise = null;
+          throw error;
+        });
+    }
+    const createClient = await createClientPromise;
     const storage = rememberSession ? window.localStorage : window.sessionStorage;
     supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: {
@@ -86,9 +122,18 @@ function getSupabaseClient(rememberSession) {
   return supabaseClient;
 }
 
+function clearOtherSessionStorage(rememberSession) {
+  const otherStorage = rememberSession ? window.sessionStorage : window.localStorage;
+  try {
+    otherStorage.removeItem(SUPABASE_STORAGE_KEY);
+  } catch (error) {
+    console.warn("No se pudo limpiar una sesión anterior del navegador.", error);
+  }
+}
+
 function showAuthError(error) {
   if (error.message === "CONFIGURATION") {
-    return "El acceso todavía no está configurado. Añade la URL y la clave pública de tu proyecto Supabase en js/login.js.";
+    return "No se pudo configurar el acceso. Revisa la configuración pública de Supabase.";
   }
 
   if (error.status === 400 || error.status === 401) {
@@ -97,6 +142,10 @@ function showAuthError(error) {
 
   if (!navigator.onLine) {
     return "No hay conexión a Internet. Comprueba tu conexión e inténtalo de nuevo.";
+  }
+
+  if (error instanceof TypeError) {
+    return "No se pudo conectar con el servicio de autenticación. Comprueba tu conexión e inténtalo de nuevo.";
   }
 
   return "No se pudo completar la solicitud. Inténtalo de nuevo en unos momentos.";
@@ -112,7 +161,15 @@ passwordToggle.addEventListener("click", () => {
 accountPrompt.addEventListener("click", (event) => {
   if (event.target.closest("#account-toggle")) {
     event.preventDefault();
-    updateAccountMode(!isRegisterMode);
+    updateAccountMode(!isRegisterMode && !isRecoveryMode);
+  }
+});
+
+rememberInput.addEventListener("change", () => {
+  try {
+    localStorage.setItem(REMEMBER_PREFERENCE_KEY, String(rememberInput.checked));
+  } catch (error) {
+    console.warn("No se pudo guardar la preferencia de sesión.", error);
   }
 });
 
@@ -122,32 +179,38 @@ form.addEventListener("submit", async (event) => {
 
   if (!form.reportValidity()) return;
 
-  if (isRegisterMode && passwordInput.value !== confirmPasswordInput.value) {
+  if ((isRegisterMode || isRecoveryMode) && passwordInput.value !== confirmPasswordInput.value) {
     confirmPasswordInput.setCustomValidity("Las contraseñas no coinciden.");
     confirmPasswordInput.reportValidity();
     confirmPasswordInput.focus();
     return;
   }
 
-  setLoading(true);
+  setLoading(true, getSubmitLabel());
 
   try {
-    const supabase = getSupabaseClient(rememberInput.checked);
-    const email = emailInput.value.trim();
+    const supabase = await getSupabaseClient(rememberInput.checked);
 
+    if (isRecoveryMode) {
+      const { error } = await supabase.auth.updateUser({ password: passwordInput.value });
+      if (error) throw error;
+      window.location.assign(CFT_URL);
+      return;
+    }
+
+    const email = emailInput.value.trim();
     if (isRegisterMode) {
       const { data, error } = await supabase.auth.signUp({
         email,
-        password: passwordInput.value,
-        options: { emailRedirectTo: LOGIN_REDIRECT }
+        password: passwordInput.value
       });
 
       if (error) throw error;
-
       if (data.session) {
-        window.location.assign(LOGIN_REDIRECT);
+        clearOtherSessionStorage(rememberInput.checked);
+        window.location.assign(CFT_URL);
       } else {
-        setMessage("Si el registro puede completarse con ese correo, recibirás un mensaje para confirmar la dirección y activar el acceso.", "success");
+        setMessage("Revisa tu correo para confirmar la cuenta y activar el acceso.", "success");
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({
@@ -156,13 +219,16 @@ form.addEventListener("submit", async (event) => {
       });
 
       if (error) throw error;
-      window.location.assign(LOGIN_REDIRECT);
+      clearOtherSessionStorage(rememberInput.checked);
+      window.location.assign(CFT_URL);
     }
   } catch (error) {
-    console.error(isRegisterMode ? "Error al crear la cuenta:" : "Error al iniciar sesión:", error);
+    console.error(isRecoveryMode
+      ? "Error al actualizar la contraseña:"
+      : isRegisterMode ? "Error al crear la cuenta:" : "Error al iniciar sesión:", error);
     setMessage(showAuthError(error), "error");
   } finally {
-    setLoading(false, isRegisterMode ? "Crear cuenta" : "Iniciar sesión");
+    setLoading(false, getSubmitLabel());
   }
 });
 
@@ -193,9 +259,9 @@ forgotPasswordLink.addEventListener("click", async (event) => {
   setLoading(true, "Enviar enlace de recuperación");
 
   try {
-    const supabase = getSupabaseClient(rememberInput.checked);
+    const supabase = await getSupabaseClient(rememberInput.checked);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: new URL("./login.html", window.location.href).href
+      redirectTo: PASSWORD_RESET_REDIRECT
     });
 
     if (error) throw error;
@@ -207,6 +273,21 @@ forgotPasswordLink.addEventListener("click", async (event) => {
     setLoading(false, "Iniciar sesión");
   }
 });
+
+async function initializeAuth() {
+  try {
+    const supabase = await getSupabaseClient(rememberInput.checked);
+    supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        updateAccountMode(false, true);
+        passwordInput.focus();
+      }
+    });
+  } catch (error) {
+    console.error("No se pudo inicializar Supabase Auth:", error);
+    setMessage(showAuthError(error), "error");
+  }
+}
 
 function setTheme(theme, savePreference = false) {
   const isDark = theme === "dark";
@@ -231,3 +312,5 @@ themeButton.addEventListener("click", () => {
   const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
   setTheme(nextTheme, true);
 });
+
+initializeAuth();
