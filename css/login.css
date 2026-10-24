@@ -3,6 +3,7 @@
   min-height: 100vh;
   min-height: 100svh;
   flex-direction: column;
+  transition: background-color .25s ease, color .25s ease;
 }
 
 .login-header,
@@ -27,17 +28,35 @@
 
 .login-brand-mark {
   display: grid;
-  width: 48px;
-  height: 38px;
+  width: 50px;
+  height: 50px;
+  flex: 0 0 auto;
   place-items: center;
-  border: 1px solid var(--accent-border-strong);
   border-radius: 12px;
-  color: var(--accent-secondary);
+  overflow: hidden;
+  background: #f6f8f5;
 }
 
-.login-brand-mark svg {
-  width: 40px;
-  height: 28px;
+.login-brand-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.login-brand-mark .logo-dark {
+  display: none;
+}
+
+:root[data-theme="dark"] .login-brand-mark .logo-light {
+  display: none;
+}
+
+:root[data-theme="dark"] .login-brand-mark .logo-dark {
+  display: block;
+}
+
+:root[data-theme="dark"] .login-brand-mark {
+  background: #0b4b34;
 }
 
 .login-brand-name {
@@ -78,6 +97,7 @@
   border-radius: 24px;
   background: var(--surface);
   box-shadow: 0 28px 90px rgba(var(--shadow-rgb), .12);
+  transition: background-color .25s ease, border-color .25s ease, box-shadow .25s ease;
 }
 
 .login-intro {
@@ -91,6 +111,7 @@
   background:
     radial-gradient(ellipse at 78% 15%, var(--accent-glow-strong), transparent 44%),
     var(--surface-raised);
+  transition: background-color .25s ease, color .25s ease;
 }
 
 .login-intro > :not(.login-orbit) {
@@ -163,6 +184,7 @@
   justify-content: center;
   padding: clamp(36px, 6vw, 74px);
   background: var(--surface);
+  transition: background-color .25s ease, color .25s ease;
 }
 
 .login-card-heading {
