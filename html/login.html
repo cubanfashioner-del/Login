@@ -63,6 +63,25 @@
         </div>
 
         <form class="login-form" id="login-form">
+          <div class="login-field" id="username-field" hidden>
+            <label for="username">Nombre de usuario</label>
+            <input id="username" name="username" type="text" minlength="3" maxlength="30" pattern="[A-Za-z0-9_]{3,30}" autocomplete="username" placeholder="Ejemplo: usuario_cft" disabled aria-describedby="login-message username-help">
+            <small id="username-help">Usa entre 3 y 30 letras, números o guiones bajos.</small>
+          </div>
+
+          <div class="login-field" id="phone-field" hidden>
+            <label for="phone">Número de teléfono</label>
+            <input id="phone" name="phone" type="tel" pattern="\+[1-9][0-9]{7,14}" autocomplete="tel" placeholder="+5350727220" disabled aria-describedby="login-message phone-help">
+            <small id="phone-help">Escríbelo en formato internacional, por ejemplo +5350727220.</small>
+          </div>
+
+          <div class="login-field login-consent-field" id="consent-field" hidden>
+            <label class="login-consent">
+              <input id="terms-consent" name="terms-consent" type="checkbox" disabled>
+              <span>He leído y acepto los <a href="https://cubanfashioner-del.github.io/plitermicon/html/terminos.html" target="_blank" rel="noopener noreferrer">términos y condiciones</a> y la <a href="https://cubanfashioner-del.github.io/plitermicon/html/privacidad.html" target="_blank" rel="noopener noreferrer">política de privacidad</a>.</span>
+            </label>
+          </div>
+
           <div class="login-field" id="email-field">
             <label for="email">Correo electrónico</label>
             <input
@@ -117,10 +136,6 @@
 
           <div class="login-options">
             <a class="login-text-link" href="#restablecer" id="forgot-password">¿Olvidaste tu contraseña?</a>
-            <label class="remember-option" for="remember-me">
-              <input id="remember-me" name="remember-me" type="checkbox">
-              <span>Recordarme</span>
-            </label>
           </div>
 
           <p class="login-message" id="login-message" role="status" aria-live="polite" aria-atomic="true" hidden></p>

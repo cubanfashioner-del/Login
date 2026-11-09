@@ -2,18 +2,21 @@ const SUPABASE_URL = "https://fzgkaolxngitwlatsusf.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6Z2thb2x4bmdpdHdsYXRzdXNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI2OTE5MDAsImV4cCI6MjEwODI2NzkwMH0.l_l4MV9Scu7PTZLztGam8DP7HGRCh93fCosA4R3m5P4";
 const SUPABASE_STORAGE_KEY = "sb-fzgkaolxngitwlatsusf-auth-token";
 const CFT_URL = "https://cubanfashioner-del.github.io/CFT-sitio-oficial/";
-const PASSWORD_RESET_REDIRECT = "https://cubanfashioner-del.github.io/Login/html/login.html";
-const REMEMBER_PREFERENCE_KEY = "cft-auth-remember";
+const LOGIN_URL = "https://cubanfashioner-del.github.io/Login/html/login.html";
 
 const form = document.querySelector("#login-form");
+const usernameInput = document.querySelector("#username");
+const usernameField = document.querySelector("#username-field");
+const phoneInput = document.querySelector("#phone");
+const phoneField = document.querySelector("#phone-field");
+const consentInput = document.querySelector("#terms-consent");
+const consentField = document.querySelector("#consent-field");
 const emailField = document.querySelector("#email-field");
 const emailInput = document.querySelector("#email");
 const passwordInput = document.querySelector("#password");
 const confirmPasswordField = document.querySelector("#confirm-password-field");
 const confirmPasswordInput = document.querySelector("#confirm-password");
 const confirmPasswordLabel = confirmPasswordField.querySelector("label");
-const rememberInput = document.querySelector("#remember-me");
-const rememberOption = document.querySelector(".remember-option");
 const submitButton = document.querySelector("#login-submit");
 const submitLabel = submitButton.querySelector(".login-submit-label");
 const message = document.querySelector("#login-message");
@@ -23,18 +26,11 @@ const accountPrompt = document.querySelector("#account-prompt");
 const currentYear = document.querySelector("#current-year");
 
 let supabaseClient = null;
-let clientPersistence = null;
 let createClientPromise = null;
 let isRegisterMode = false;
 let isRecoveryMode = false;
 
 currentYear.textContent = String(new Date().getFullYear());
-
-try {
-  rememberInput.checked = localStorage.getItem(REMEMBER_PREFERENCE_KEY) === "true";
-} catch (error) {
-  console.warn("No se pudo leer la preferencia de sesión.", error);
-}
 
 function setMessage(text, state = "info") {
   message.textContent = text;
@@ -78,6 +74,15 @@ function updateAccountMode(registerMode, recoveryMode = false) {
   emailField.hidden = recoveryMode;
   emailInput.disabled = recoveryMode;
   emailInput.required = !recoveryMode;
+  usernameField.hidden = !registerMode;
+  usernameInput.disabled = !registerMode;
+  usernameInput.required = registerMode;
+  phoneField.hidden = !registerMode;
+  phoneInput.disabled = !registerMode;
+  phoneInput.required = registerMode;
+  consentField.hidden = !registerMode;
+  consentInput.disabled = !registerMode;
+  consentInput.required = registerMode;
   confirmPasswordLabel.textContent = recoveryMode ? "Confirmar nueva contraseña" : "Confirmar contraseña";
   confirmPasswordField.hidden = !passwordSetupMode;
   confirmPasswordInput.disabled = !passwordSetupMode;
@@ -85,16 +90,15 @@ function updateAccountMode(registerMode, recoveryMode = false) {
   passwordInput.minLength = passwordSetupMode ? 6 : 0;
   passwordInput.autocomplete = passwordSetupMode ? "new-password" : "current-password";
   forgotPasswordLink.hidden = passwordSetupMode;
-  rememberOption.hidden = passwordSetupMode;
   setMessage("");
 }
 
-async function getSupabaseClient(rememberSession) {
+async function getSupabaseClient() {
   if (!SUPABASE_URL.startsWith("https://") || !SUPABASE_ANON_KEY) {
     throw new Error("CONFIGURATION");
   }
 
-  if (!supabaseClient || clientPersistence !== rememberSession) {
+  if (!supabaseClient) {
     if (!createClientPromise) {
       createClientPromise = import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm")
         .then(({ createClient }) => createClient)
@@ -104,25 +108,27 @@ async function getSupabaseClient(rememberSession) {
         });
     }
     const createClient = await createClientPromise;
-    const storage = rememberSession ? window.localStorage : window.sessionStorage;
+    try {
+      window.localStorage.removeItem(SUPABASE_STORAGE_KEY);
+    } catch (error) {
+      console.warn("No se pudo limpiar una sesión persistente anterior.", error);
+    }
     supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: {
         autoRefreshToken: true,
         detectSessionInUrl: true,
         persistSession: true,
-        storage
+        storage: window.sessionStorage
       }
     });
-    clientPersistence = rememberSession;
   }
 
   return supabaseClient;
 }
 
-function clearOtherSessionStorage(rememberSession) {
-  const otherStorage = rememberSession ? window.sessionStorage : window.localStorage;
+function clearPersistentSession() {
   try {
-    otherStorage.removeItem(SUPABASE_STORAGE_KEY);
+    window.localStorage.removeItem(SUPABASE_STORAGE_KEY);
   } catch (error) {
     console.warn("No se pudo limpiar una sesión anterior del navegador.", error);
   }
@@ -162,14 +168,6 @@ accountPrompt.addEventListener("click", (event) => {
   }
 });
 
-rememberInput.addEventListener("change", () => {
-  try {
-    localStorage.setItem(REMEMBER_PREFERENCE_KEY, String(rememberInput.checked));
-  } catch (error) {
-    console.warn("No se pudo guardar la preferencia de sesión.", error);
-  }
-});
-
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   setMessage("");
@@ -186,7 +184,7 @@ form.addEventListener("submit", async (event) => {
   setLoading(true, getSubmitLabel());
 
   try {
-    const supabase = await getSupabaseClient(rememberInput.checked);
+    const supabase = await getSupabaseClient();
 
     if (isRecoveryMode) {
       const { error } = await supabase.auth.updateUser({ password: passwordInput.value });
@@ -197,17 +195,38 @@ form.addEventListener("submit", async (event) => {
 
     const email = emailInput.value.trim();
     if (isRegisterMode) {
+      if (!/^[A-Za-z0-9_]{3,30}$/.test(usernameInput.value.trim())) {
+        usernameInput.setCustomValidity("Usa entre 3 y 30 letras, números o guiones bajos.");
+        usernameInput.reportValidity();
+        usernameInput.focus();
+        return;
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
-        password: passwordInput.value
+        password: passwordInput.value,
+        options: {
+          emailRedirectTo: CFT_URL,
+          data: {
+            username: usernameInput.value.trim().toLowerCase(),
+            phone: phoneInput.value.trim(),
+            terms_accepted_at: new Date().toISOString(),
+            privacy_notice_version: "2026-11-09"
+          }
+        }
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === "23505" || /profiles_username_lower_idx/i.test(error.message)) {
+          throw new Error("Ese nombre de usuario ya está registrado. Elige otro.");
+        }
+        throw error;
+      }
       if (data.session) {
-        clearOtherSessionStorage(rememberInput.checked);
+        clearPersistentSession();
         window.location.assign(CFT_URL);
       } else {
-        setMessage("Revisa tu correo para confirmar la cuenta y activar el acceso.", "success");
+        setMessage("Si el registro puede completarse con ese correo, recibirás un mensaje para confirmar la dirección y activar el acceso. Tu nombre de usuario y teléfono quedarán guardados en tu perfil.", "success");
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({
@@ -216,7 +235,7 @@ form.addEventListener("submit", async (event) => {
       });
 
       if (error) throw error;
-      clearOtherSessionStorage(rememberInput.checked);
+      clearPersistentSession();
       window.location.assign(CFT_URL);
     }
   } catch (error) {
@@ -231,6 +250,10 @@ form.addEventListener("submit", async (event) => {
 
 passwordInput.addEventListener("input", () => {
   confirmPasswordInput.setCustomValidity("");
+});
+
+usernameInput.addEventListener("input", () => {
+  usernameInput.setCustomValidity("");
 });
 
 confirmPasswordInput.addEventListener("input", () => {
@@ -256,9 +279,9 @@ forgotPasswordLink.addEventListener("click", async (event) => {
   setLoading(true, "Enviar enlace de recuperación");
 
   try {
-    const supabase = await getSupabaseClient(rememberInput.checked);
+    const supabase = await getSupabaseClient();
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: PASSWORD_RESET_REDIRECT
+      redirectTo: LOGIN_URL
     });
 
     if (error) throw error;
@@ -273,7 +296,7 @@ forgotPasswordLink.addEventListener("click", async (event) => {
 
 async function initializeAuth() {
   try {
-    const supabase = await getSupabaseClient(rememberInput.checked);
+    const supabase = await getSupabaseClient();
     supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         updateAccountMode(false, true);
@@ -284,6 +307,10 @@ async function initializeAuth() {
     console.error("No se pudo inicializar Supabase Auth:", error);
     setMessage(showAuthError(error), "error");
   }
+}
+
+if (window.location.hash === "#registrarse") {
+  updateAccountMode(true);
 }
 
 initializeAuth();
