@@ -64,13 +64,13 @@
 
         <form class="login-form" id="login-form">
           <div class="login-field" id="username-field" hidden>
-            <label for="username">Nombre de usuario</label>
+            <label for="username">Nombre de usuario (opcional)</label>
             <input id="username" name="username" type="text" minlength="3" maxlength="30" pattern="[A-Za-z0-9_]{3,30}" autocomplete="username" placeholder="Ejemplo: usuario_cft" disabled aria-describedby="login-message username-help">
             <small id="username-help">Usa entre 3 y 30 letras, números o guiones bajos.</small>
           </div>
 
           <div class="login-field" id="phone-field" hidden>
-            <label for="phone">Número de teléfono</label>
+            <label for="phone">Número de teléfono (opcional)</label>
             <div class="phone-input-group">
               <select id="phone-country-code" name="phone-country-code" autocomplete="tel-country-code" aria-label="Código de país" disabled>
                 <option value="+53" selected>Cuba (+53)</option>

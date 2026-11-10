@@ -77,12 +77,12 @@ function updateAccountMode(registerMode, recoveryMode = false) {
   emailInput.required = !recoveryMode;
   usernameField.hidden = !registerMode;
   usernameInput.disabled = !registerMode;
-  usernameInput.required = registerMode;
+  usernameInput.required = false;
   phoneField.hidden = !registerMode;
   phoneInput.disabled = !registerMode;
-  phoneInput.required = registerMode;
+  phoneInput.required = false;
   phoneCountryCodeInput.disabled = !registerMode;
-  phoneCountryCodeInput.required = registerMode;
+  phoneCountryCodeInput.required = false;
   consentField.hidden = !registerMode;
   consentInput.disabled = !registerMode;
   consentInput.required = registerMode;
@@ -213,11 +213,22 @@ form.addEventListener("submit", async (event) => {
 
     const email = emailInput.value.trim();
     if (isRegisterMode) {
-      if (!/^[A-Za-z0-9_]{3,30}$/.test(usernameInput.value.trim())) {
+      const username = usernameInput.value.trim().toLowerCase();
+      const nationalPhoneNumber = phoneInput.value.replace(/\D/g, "");
+      if (username && !/^[A-Za-z0-9_]{3,30}$/.test(username)) {
         usernameInput.setCustomValidity("Usa entre 3 y 30 letras, números o guiones bajos.");
         usernameInput.reportValidity();
         usernameInput.focus();
         return;
+      }
+
+      const userMetadata = {
+        terms_accepted_at: new Date().toISOString(),
+        privacy_notice_version: "2026-11-09"
+      };
+      if (username) userMetadata.username = username;
+      if (nationalPhoneNumber) {
+        userMetadata.phone = `${phoneCountryCodeInput.value}${nationalPhoneNumber}`;
       }
 
       const { data, error } = await supabase.auth.signUp({
@@ -225,12 +236,7 @@ form.addEventListener("submit", async (event) => {
         password: passwordInput.value,
         options: {
           emailRedirectTo: CFT_URL,
-          data: {
-            username: usernameInput.value.trim().toLowerCase(),
-            phone: `${phoneCountryCodeInput.value}${phoneInput.value.replace(/\D/g, "")}`,
-            terms_accepted_at: new Date().toISOString(),
-            privacy_notice_version: "2026-11-09"
-          }
+          data: userMetadata
         }
       });
 
@@ -244,7 +250,7 @@ form.addEventListener("submit", async (event) => {
         clearPersistentSession();
         window.location.assign(CFT_URL);
       } else {
-        setMessage("Si el registro puede completarse con ese correo, recibirás un mensaje para confirmar la dirección y activar el acceso. Tu nombre de usuario y teléfono quedarán guardados en tu perfil.", "success");
+        setMessage("Si el registro puede completarse con ese correo, recibirás un mensaje para confirmar la dirección y activar el acceso. El nombre de usuario y el teléfono son opcionales y podrás completarlos después.", "success");
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({
