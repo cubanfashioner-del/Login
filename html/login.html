@@ -71,8 +71,50 @@
 
           <div class="login-field" id="phone-field" hidden>
             <label for="phone">Número de teléfono</label>
-            <input id="phone" name="phone" type="tel" pattern="\+[1-9][0-9]{7,14}" autocomplete="tel" placeholder="+5350727220" disabled aria-describedby="login-message phone-help">
-            <small id="phone-help">Escríbelo en formato internacional, por ejemplo +5350727220.</small>
+            <div class="phone-input-group">
+              <select id="phone-country-code" name="phone-country-code" autocomplete="tel-country-code" aria-label="Código de país" disabled>
+                <option value="+53" selected>Cuba (+53)</option>
+                <option value="+1">EE. UU. / Canadá (+1)</option>
+                <option value="+34">España (+34)</option>
+                <option value="+52">México (+52)</option>
+                <option value="+54">Argentina (+54)</option>
+                <option value="+55">Brasil (+55)</option>
+                <option value="+56">Chile (+56)</option>
+                <option value="+57">Colombia (+57)</option>
+                <option value="+58">Venezuela (+58)</option>
+                <option value="+51">Perú (+51)</option>
+                <option value="+593">Ecuador (+593)</option>
+                <option value="+591">Bolivia (+591)</option>
+                <option value="+595">Paraguay (+595)</option>
+                <option value="+598">Uruguay (+598)</option>
+                <option value="+506">Costa Rica (+506)</option>
+                <option value="+507">Panamá (+507)</option>
+                <option value="+502">Guatemala (+502)</option>
+                <option value="+503">El Salvador (+503)</option>
+                <option value="+504">Honduras (+504)</option>
+                <option value="+505">Nicaragua (+505)</option>
+                <option value="+509">Haití (+509)</option>
+                <option value="+1809">República Dominicana (+1 809)</option>
+                <option value="+1787">Puerto Rico (+1 787)</option>
+                <option value="+44">Reino Unido (+44)</option>
+                <option value="+33">Francia (+33)</option>
+                <option value="+49">Alemania (+49)</option>
+                <option value="+39">Italia (+39)</option>
+                <option value="+351">Portugal (+351)</option>
+                <option value="+7">Rusia / Kazajistán (+7)</option>
+                <option value="+90">Turquía (+90)</option>
+                <option value="+971">Emiratos Árabes Unidos (+971)</option>
+                <option value="+91">India (+91)</option>
+                <option value="+86">China (+86)</option>
+                <option value="+81">Japón (+81)</option>
+                <option value="+82">Corea del Sur (+82)</option>
+                <option value="+61">Australia (+61)</option>
+                <option value="+64">Nueva Zelanda (+64)</option>
+                <option value="+27">Sudáfrica (+27)</option>
+              </select>
+              <input id="phone" name="phone" type="tel" inputmode="numeric" pattern="[0-9]{4,14}" maxlength="14" autocomplete="tel-national" placeholder="Número local" disabled aria-describedby="login-message phone-help">
+            </div>
+            <small id="phone-help">Elige el código de tu país e introduce el número sin el prefijo.</small>
           </div>
 
           <div class="login-field login-consent-field" id="consent-field" hidden>

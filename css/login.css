@@ -280,6 +280,36 @@
   transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
 }
 
+.phone-input-group {
+  display: grid;
+  grid-template-columns: minmax(132px, .75fr) minmax(0, 1.5fr);
+  gap: 8px;
+}
+
+.phone-input-group select {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  outline: none;
+  background: var(--bg-primary);
+  color: var(--text-main);
+  font: inherit;
+  font-size: .82rem;
+  transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+}
+
+.phone-input-group select:hover {
+  border-color: var(--accent-border-strong);
+}
+
+.phone-input-group select:focus {
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
 .login-field input::placeholder {
   color: var(--text-subtle);
   opacity: .85;

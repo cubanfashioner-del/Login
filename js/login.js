@@ -8,6 +8,7 @@ const form = document.querySelector("#login-form");
 const usernameInput = document.querySelector("#username");
 const usernameField = document.querySelector("#username-field");
 const phoneInput = document.querySelector("#phone");
+const phoneCountryCodeInput = document.querySelector("#phone-country-code");
 const phoneField = document.querySelector("#phone-field");
 const consentInput = document.querySelector("#terms-consent");
 const consentField = document.querySelector("#consent-field");
@@ -80,6 +81,8 @@ function updateAccountMode(registerMode, recoveryMode = false) {
   phoneField.hidden = !registerMode;
   phoneInput.disabled = !registerMode;
   phoneInput.required = registerMode;
+  phoneCountryCodeInput.disabled = !registerMode;
+  phoneCountryCodeInput.required = registerMode;
   consentField.hidden = !registerMode;
   consentInput.disabled = !registerMode;
   consentInput.required = registerMode;
@@ -92,6 +95,20 @@ function updateAccountMode(registerMode, recoveryMode = false) {
   forgotPasswordLink.hidden = passwordSetupMode;
   setMessage("");
 }
+
+function updatePhoneValidity() {
+  const nationalNumber = phoneInput.value.replace(/\D/g, "");
+  const internationalNumber = `${phoneCountryCodeInput.value}${nationalNumber}`;
+  const isValid = /^\+[1-9][0-9]{6,14}$/.test(internationalNumber);
+  phoneInput.setCustomValidity(
+    !nationalNumber || isValid
+      ? ""
+      : "Introduce un número válido para el código de país seleccionado."
+  );
+}
+
+phoneInput.addEventListener("input", updatePhoneValidity);
+phoneCountryCodeInput.addEventListener("change", updatePhoneValidity);
 
 async function getSupabaseClient() {
   if (!SUPABASE_URL.startsWith("https://") || !SUPABASE_ANON_KEY) {
@@ -172,6 +189,7 @@ form.addEventListener("submit", async (event) => {
   event.preventDefault();
   setMessage("");
 
+  if (isRegisterMode) updatePhoneValidity();
   if (!form.reportValidity()) return;
 
   if ((isRegisterMode || isRecoveryMode) && passwordInput.value !== confirmPasswordInput.value) {
@@ -209,7 +227,7 @@ form.addEventListener("submit", async (event) => {
           emailRedirectTo: CFT_URL,
           data: {
             username: usernameInput.value.trim().toLowerCase(),
-            phone: phoneInput.value.trim(),
+            phone: `${phoneCountryCodeInput.value}${phoneInput.value.replace(/\D/g, "")}`,
             terms_accepted_at: new Date().toISOString(),
             privacy_notice_version: "2026-11-09"
           }
