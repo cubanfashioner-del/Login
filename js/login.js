@@ -322,10 +322,12 @@ form.addEventListener("submit", async (event) => {
         userMetadata.phone = `${phoneCountryCodeInput.value}${nationalPhoneNumber}`;
       }
 
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signInWithOtp({
         email,
-        password: passwordInput.value,
-        options: { data: userMetadata }
+        options: {
+          shouldCreateUser: true,
+          data: userMetadata
+        }
       });
 
       if (error) {
@@ -335,6 +337,10 @@ form.addEventListener("submit", async (event) => {
         throw error;
       }
       if (data.session) {
+        const { error: passwordError } = await supabase.auth.updateUser({
+          password: passwordInput.value
+        });
+        if (passwordError) throw passwordError;
         clearPersistentSession();
         window.location.assign(CFT_URL);
         return;
@@ -381,7 +387,7 @@ form.addEventListener("submit", async (event) => {
     }
 
     if (authStep === "signup-otp" || authStep === "recovery-otp") {
-      const verificationType = authStep === "signup-otp" ? "signup" : "recovery";
+      const verificationType = authStep === "signup-otp" ? "email" : "recovery";
       const { data, error } = await supabase.auth.verifyOtp({
         email,
         token: otpInput.value.trim(),
@@ -389,7 +395,7 @@ form.addEventListener("submit", async (event) => {
       });
       if (error) throw error;
 
-      if (verificationType === "signup") {
+      if (authStep === "signup-otp") {
         if (!data.session && pendingSignupPassword) {
           const { error: signInError } = await supabase.auth.signInWithPassword({
             email,
@@ -404,6 +410,12 @@ form.addEventListener("submit", async (event) => {
           return;
         }
 
+        if (pendingSignupPassword) {
+          const { error: passwordError } = await supabase.auth.updateUser({
+            password: pendingSignupPassword
+          });
+          if (passwordError) throw passwordError;
+        }
         pendingSignupPassword = "";
         clearPersistentSession();
         window.location.assign(CFT_URL);
@@ -469,7 +481,10 @@ resendButton.addEventListener("click", async () => {
     const email = emailInput.value.trim();
 
     if (authStep === "signup-otp") {
-      const { error } = await supabase.auth.resend({ type: "signup", email });
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: true }
+      });
       if (error) throw error;
     } else {
       const { error } = await supabase.auth.resetPasswordForEmail(email);
