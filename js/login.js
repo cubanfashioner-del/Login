@@ -1,5 +1,5 @@
 const SUPABASE_URL = "https://fzgkaolxngitwlatsusf.supabase.co";
-const SUPABASE_ANON_KEY = "******";
+const SUPABASE_ANON_KEY = "sb_publishable_OurLjIf6vdHNA8Igw1uULw_HbJLyM1P";
 const SUPABASE_STORAGE_KEY = "sb-fzgkaolxngitwlatsusf-auth-token";
 const CFT_URL = "https://cubanfashioner-del.github.io/CFT-sitio-oficial/";
 
