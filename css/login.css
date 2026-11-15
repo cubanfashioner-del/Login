@@ -348,6 +348,21 @@
   text-underline-offset: 3px;
 }
 
+.login-field #resend-code {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.login-field #resend-code:disabled {
+  color: var(--text-muted);
+  cursor: wait;
+  text-decoration: none;
+}
+
 .login-password-wrap {
   position: relative;
 }
