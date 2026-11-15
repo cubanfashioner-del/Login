@@ -38,6 +38,7 @@ let supabaseClient = null;
 let createClientPromise = null;
 let authStep = "login";
 let pendingSignupPassword = "";
+let pendingSignupMetadata = null;
 let resendCooldownUntil = 0;
 let resendCooldownTimer = null;
 
@@ -207,6 +208,52 @@ function clearPersistentSession() {
   }
 }
 
+async function saveVerifiedSignup(supabase) {
+  const updates = {};
+  if (pendingSignupPassword) updates.password = pendingSignupPassword;
+  if (pendingSignupMetadata) updates.data = pendingSignupMetadata;
+
+  if (Object.keys(updates).length === 0) {
+    throw new Error("No se conservaron los datos del registro. Vuelve a registrarte.");
+  }
+
+  const { error } = await supabase.auth.updateUser(updates);
+  if (error) throw error;
+
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError) throw userError;
+  if (!userData.user) throw new Error("VERIFICATION_SESSION_MISSING");
+
+  const profileUpdates = {};
+  if (pendingSignupMetadata?.username) {
+    profileUpdates.username = pendingSignupMetadata.username;
+  }
+  if (pendingSignupMetadata?.phone) {
+    profileUpdates.phone = pendingSignupMetadata.phone;
+  }
+
+  const profileQuery = Object.keys(profileUpdates).length > 0
+    ? supabase
+      .from("profiles")
+      .update(profileUpdates)
+      .eq("id", userData.user.id)
+      .select("id")
+      .single()
+    : supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", userData.user.id)
+      .single();
+  const { error: profileError } = await profileQuery;
+  if (profileError) {
+    console.error("No se pudo guardar el perfil después de confirmar el correo:", profileError);
+    throw new Error("PROFILE_SAVE_FAILED");
+  }
+
+  pendingSignupPassword = "";
+  pendingSignupMetadata = null;
+}
+
 function showAuthError(error) {
   const code = String(error?.code || "").toLowerCase();
   const details = `${code} ${error?.message || ""}`.toLowerCase();
@@ -216,6 +263,12 @@ function showAuthError(error) {
   }
   if (error?.message === "RECOVERY_SESSION_MISSING") {
     return "El código se validó, pero no se pudo iniciar la sesión de recuperación. Solicita otro código e inténtalo de nuevo.";
+  }
+  if (error?.message === "VERIFICATION_SESSION_MISSING") {
+    return "El código se validó, pero no se inició la sesión para guardar los datos. Inténtalo de nuevo o contacta con soporte.";
+  }
+  if (error?.message === "PROFILE_SAVE_FAILED") {
+    return "El correo quedó confirmado, pero no se pudieron guardar los datos del perfil. Inicia sesión y vuelve a intentarlo o contacta con soporte.";
   }
   if (/rate.?limit|too many requests|over_email_send_rate_limit|email rate limit/.test(details)) {
     return "Se alcanzó el límite de envíos de códigos. Espera un momento antes de volver a intentarlo.";
@@ -337,16 +390,16 @@ form.addEventListener("submit", async (event) => {
         throw error;
       }
       if (data.session) {
-        const { error: passwordError } = await supabase.auth.updateUser({
-          password: passwordInput.value
-        });
-        if (passwordError) throw passwordError;
+        pendingSignupPassword = passwordInput.value;
+        pendingSignupMetadata = userMetadata;
+        await saveVerifiedSignup(supabase);
         clearPersistentSession();
         window.location.assign(CFT_URL);
         return;
       }
 
       pendingSignupPassword = passwordInput.value;
+      pendingSignupMetadata = userMetadata;
       updateAuthStep("signup-otp");
       startResendCooldown();
       setMessage("Te enviamos un código de 6 dígitos. Revisa tu correo y escríbelo aquí para confirmar la cuenta.", "success");
@@ -363,6 +416,7 @@ form.addEventListener("submit", async (event) => {
       if (error) {
         if (isUnconfirmedEmailError(error)) {
           pendingSignupPassword = passwordInput.value;
+          pendingSignupMetadata = null;
           updateAuthStep("signup-otp");
           setMessage("Tu correo todavía no está confirmado. Introduce el código enviado o reenvíalo cuando esté disponible.", "info");
           otpInput.focus();
@@ -396,27 +450,8 @@ form.addEventListener("submit", async (event) => {
       if (error) throw error;
 
       if (authStep === "signup-otp") {
-        if (!data.session && pendingSignupPassword) {
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email,
-            password: pendingSignupPassword
-          });
-          if (signInError) throw signInError;
-        } else if (!data.session) {
-          pendingSignupPassword = "";
-          updateAuthStep("login");
-          setMessage("Tu correo quedó confirmado. Inicia sesión para continuar.", "success");
-          emailInput.value = email;
-          return;
-        }
-
-        if (pendingSignupPassword) {
-          const { error: passwordError } = await supabase.auth.updateUser({
-            password: pendingSignupPassword
-          });
-          if (passwordError) throw passwordError;
-        }
-        pendingSignupPassword = "";
+        if (!data.session) throw new Error("VERIFICATION_SESSION_MISSING");
+        await saveVerifiedSignup(supabase);
         clearPersistentSession();
         window.location.assign(CFT_URL);
         return;
@@ -483,7 +518,10 @@ resendButton.addEventListener("click", async () => {
     if (authStep === "signup-otp") {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { shouldCreateUser: true }
+        options: {
+          shouldCreateUser: true,
+          ...(pendingSignupMetadata ? { data: pendingSignupMetadata } : {})
+        }
       });
       if (error) throw error;
     } else {
