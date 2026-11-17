@@ -1,52 +1,4 @@
 :root {
-      color-scheme: light;
-      --bg-primary: #f8f9fa;
-      --surface: #ffffff;
-      --surface-raised: #ffffff;
-      --text-main: #0f172a;
-      --text-muted: #64748b;
-      --text-subtle: #64748b;
-      --accent: #b48a3d;
-      --accent-secondary: #1b4332;
-      --accent-rgb: 180, 138, 61;
-      --accent-soft: rgba(180, 138, 61, .1);
-      --line: #e2e8f0;
-      --header-background: rgba(248, 249, 250, .86);
-      --nav-text: #334155;
-      --hero-copy: #475569;
-      --button-text: #0f172a;
-      --button-hover: #a77e35;
-      --button-outline-border: rgba(15, 23, 42, .18);
-      --subtle-border: rgba(15, 23, 42, .06);
-      --accent-border: rgba(var(--accent-rgb), .3);
-      --accent-border-strong: rgba(var(--accent-rgb), .48);
-      --accent-border-hover: rgba(var(--accent-rgb), .5);
-      --accent-glow: rgba(var(--accent-rgb), .07);
-      --accent-glow-strong: rgba(var(--accent-rgb), .1);
-      --accent-shadow: rgba(var(--accent-rgb), .18);
-      --section-wash: rgba(15, 23, 42, .018);
-      --contact-background: linear-gradient(110deg, rgba(var(--accent-rgb), .09), rgba(255, 255, 255, .94) 58%);
-      --footer-background: rgba(15, 23, 42, .025);
-      --menu-background: rgba(255, 255, 255, .98);
-      --shadow-rgb: 15, 23, 42;
-      --backdrop: rgba(15, 23, 42, .48);
-      --modal-copy: #475569;
-      --link-accent: #1b4332;
-      --network-line: rgba(27, 67, 50, .22);
-      --network-dash: rgba(180, 138, 61, .48);
-      --network-land: rgba(27, 67, 50, .12);
-      --network-label: rgba(27, 67, 50, .72);
-      --network-halo: rgba(180, 138, 61, .09);
-      --bg: var(--bg-primary);
-      --text: var(--text-main);
-      --muted: var(--text-muted);
-      --muted-dark: var(--text-subtle);
-      --content: 1160px;
-      --radius: 18px;
-      --font: Inter, "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-
-    :root[data-theme="dark"] {
       color-scheme: dark;
       --bg-primary: #0b0f0e;
       --surface: #131b18;
@@ -89,6 +41,9 @@
       --text: var(--text-main);
       --muted: var(--text-muted);
       --muted-dark: var(--text-subtle);
+      --content: 1160px;
+      --radius: 18px;
+      --font: Inter, "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
     *,
@@ -401,54 +356,6 @@
       min-height: 42px;
       padding-inline: 17px;
       font-size: .81rem;
-    }
-
-    .theme-toggle {
-      display: inline-flex;
-      min-width: 42px;
-      min-height: 42px;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 0 11px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: var(--surface);
-      color: var(--accent-secondary);
-      cursor: pointer;
-      transition: background-color .2s ease, border-color .2s ease, transform .2s ease;
-    }
-
-    .theme-toggle:hover {
-      transform: translateY(-1px);
-      border-color: var(--accent-border-strong);
-      background: var(--accent-soft);
-    }
-
-    .theme-toggle svg {
-      width: 18px;
-      height: 18px;
-    }
-
-    .theme-toggle .icon-sun {
-      display: none;
-    }
-
-    .theme-toggle .icon-moon {
-      display: block;
-    }
-
-    :root[data-theme="dark"] .theme-toggle .icon-sun {
-      display: block;
-    }
-
-    :root[data-theme="dark"] .theme-toggle .icon-moon {
-      display: none;
-    }
-
-    .theme-toggle-label {
-      font-size: .74rem;
-      font-weight: 650;
     }
 
     .menu-toggle {
@@ -1084,11 +991,6 @@
 
       .nav-links .nav-contact {
         margin-top: 6px;
-      }
-
-      .nav-links .theme-toggle {
-        align-self: flex-start;
-        margin: 8px 12px;
       }
 
       .hero {

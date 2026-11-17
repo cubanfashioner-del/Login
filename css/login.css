@@ -44,18 +44,10 @@
 }
 
 .login-brand-mark .logo-dark {
-  display: none;
-}
-
-:root[data-theme="dark"] .login-brand-mark .logo-light {
-  display: none;
-}
-
-:root[data-theme="dark"] .login-brand-mark .logo-dark {
   display: block;
 }
 
-:root[data-theme="dark"] .login-brand-mark {
+.login-brand-mark {
   background: #0b4b34;
 }
 
@@ -74,10 +66,6 @@
   font-weight: 600;
   letter-spacing: .2em;
   text-transform: uppercase;
-}
-
-.login-theme-toggle {
-  min-width: 42px;
 }
 
 .login-main {
@@ -348,21 +336,6 @@
   text-underline-offset: 3px;
 }
 
-.login-field #resend-code {
-  justify-self: start;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.login-field #resend-code:disabled {
-  color: var(--text-muted);
-  cursor: wait;
-  text-decoration: none;
-}
-
 .login-password-wrap {
   position: relative;
 }
@@ -434,7 +407,7 @@
   color: #a52c2c;
 }
 
-:root[data-theme="dark"] .login-message[data-state="error"] {
+.login-message[data-state="error"] {
   color: #ffaaaa;
 }
 

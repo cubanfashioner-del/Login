@@ -1,53 +1,28 @@
 <!doctype html>
-<html lang="es" data-theme="light">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f8f9fa">
+  <meta name="theme-color" content="#0b0f0e">
   <meta name="description" content="Inicia sesión en tu cuenta de CFT — Cuba Fashion Technologies.">
   <link rel="icon" href="../favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="16x16" href="../images/favicon-16x16.png" media="(prefers-color-scheme: light)">
-  <link rel="icon" type="image/png" sizes="32x32" href="../images/favicon-32x32.png" media="(prefers-color-scheme: light)">
-  <link rel="icon" type="image/png" sizes="16x16" href="../images/favicon-16x16-dark.png" media="(prefers-color-scheme: dark)">
-  <link rel="icon" type="image/png" sizes="32x32" href="../images/favicon-32x32-dark.png" media="(prefers-color-scheme: dark)">
-  <link rel="apple-touch-icon" sizes="180x180" href="../images/apple-touch-icon.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="../images/apple-touch-icon-dark.png" media="(prefers-color-scheme: dark)">
+  <link rel="icon" type="image/png" sizes="16x16" href="../images/favicon-16x16-dark.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../images/favicon-32x32-dark.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="../images/apple-touch-icon-dark.png">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="preconnect" href="https://fzgkaolxngitwlatsusf.supabase.co">
   <title>Iniciar sesión | CFT — Cuba Fashion Technologies</title>
-  <script>
-    try {
-      const savedTheme = localStorage.getItem("cft-theme") || localStorage.getItem("cuban-fashioner-tech-theme");
-      if (savedTheme === "light" || savedTheme === "dark") {
-        document.documentElement.dataset.theme = savedTheme;
-      }
-    } catch (error) {
-      console.warn("No se pudo leer la preferencia de tema guardada.", error);
-    }
-  </script>
   <link rel="stylesheet" href="../css/styles.css">
   <link rel="stylesheet" href="../css/login.css">
-  <script src="../js/theme.js" defer></script>
 </head>
 <body class="login-page">
   <header class="login-header">
     <a class="login-brand" href="https://cubanfashioner-del.github.io/CFT-sitio-oficial/" aria-label="CFT — Cuba Fashion Technologies, volver al inicio">
       <span class="login-brand-mark" aria-hidden="true">
-        <img class="logo-light" src="../images/logo-cft-claro-optimized.jpg" width="160" height="160" alt="">
         <img class="logo-dark" src="../images/logo-cft-oscuro-optimized.jpg" width="160" height="160" alt="">
       </span>
       <span class="login-brand-name">CFT<span>Cuba Fashion Technologies</span></span>
     </a>
-    <button class="theme-toggle login-theme-toggle" id="theme-toggle" type="button" aria-label="Cambiar a modo oscuro" aria-pressed="false" title="Cambiar a modo oscuro">
-      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/>
-        <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
-      </svg>
-      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M20.2 15.2A8.5 8.5 0 0 1 8.8 3.8 8.5 8.5 0 1 0 20.2 15.2Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span class="theme-toggle-label" id="theme-toggle-label">Oscuro</span>
-    </button>
   </header>
 
   <main class="login-main">
@@ -74,7 +49,7 @@
         <form class="login-form" id="login-form">
           <div class="login-field" id="username-field" hidden>
             <label for="username">Nombre de usuario (opcional)</label>
-            <input id="username" name="username" type="text" minlength="3" maxlength="30" pattern="[A-Za-z0-9_]{3,30}" autocomplete="username" placeholder="Ejemplo: usuario_cft" disabled aria-describedby="login-message username-help">
+            <input id="username" name="cft-username" type="text" minlength="3" maxlength="30" pattern="[A-Za-z0-9_]{3,30}" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Ejemplo: usuario_cft" disabled aria-describedby="login-message username-help">
             <small id="username-help">Usa entre 3 y 30 letras, números o guiones bajos.</small>
           </div>
 
@@ -183,23 +158,6 @@
               minlength="6"
               disabled
               aria-describedby="login-message">
-          </div>
-
-          <div class="login-field" id="otp-field" hidden>
-            <label for="otp-code">Código de verificación</label>
-            <input
-              id="otp-code"
-              name="otp-code"
-              type="text"
-              inputmode="numeric"
-              autocomplete="one-time-code"
-              pattern="[0-9]{6}"
-              maxlength="6"
-              placeholder="Escribe el código de 6 dígitos"
-              disabled
-              aria-describedby="login-message otp-help">
-            <small id="otp-help">Introduce el código de 6 dígitos enviado a tu correo.</small>
-            <button class="login-text-link" id="resend-code" type="button" disabled>Reenviar código</button>
           </div>
 
           <div class="login-options" id="login-options">

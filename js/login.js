@@ -18,9 +18,6 @@ const passwordInput = document.querySelector("#password");
 const confirmPasswordField = document.querySelector("#confirm-password-field");
 const confirmPasswordInput = document.querySelector("#confirm-password");
 const confirmPasswordLabel = confirmPasswordField.querySelector("label");
-const otpField = document.querySelector("#otp-field");
-const otpInput = document.querySelector("#otp-code");
-const resendButton = document.querySelector("#resend-code");
 const loginOptions = document.querySelector("#login-options");
 const submitButton = document.querySelector("#login-submit");
 const submitLabel = submitButton.querySelector(".login-submit-label");
@@ -32,15 +29,10 @@ const currentYear = document.querySelector("#current-year");
 const loginTitle = document.querySelector("#login-title");
 const loginKicker = document.querySelector(".login-card-kicker");
 const loginDescription = document.querySelector(".login-card-heading p");
-const otpHelp = document.querySelector("#otp-help");
 
 let supabaseClient = null;
 let createClientPromise = null;
 let authStep = "login";
-let pendingSignupPassword = "";
-let pendingSignupMetadata = null;
-let resendCooldownUntil = 0;
-let resendCooldownTimer = null;
 
 currentYear.textContent = String(new Date().getFullYear());
 
@@ -60,11 +52,8 @@ function getSubmitLabel() {
   switch (authStep) {
     case "signup":
       return "Crear cuenta";
-    case "signup-otp":
-    case "recovery-otp":
-      return "Verificar código";
     case "recovery-email":
-      return "Enviar código";
+      return "Enviar enlace";
     case "recovery-password":
       return "Guardar contraseña";
     default:
@@ -75,19 +64,17 @@ function getSubmitLabel() {
 function updateAuthStep(step) {
   authStep = step;
   const isSignup = step === "signup";
-  const isSignupOtp = step === "signup-otp";
   const isRecovery = step.startsWith("recovery-");
-  const isOtp = isSignupOtp || step === "recovery-otp";
   const showEmail = step === "login" || isSignup || step === "recovery-email";
   const showPassword = step === "login" || isSignup || step === "recovery-password";
   const needsConfirmation = isSignup || step === "recovery-password";
 
+  if (isSignup) usernameInput.value = "";
+
   const copy = {
     login: ["Bienvenido de vuelta", "Iniciar sesión", "Ingresa tus datos para acceder a tu cuenta."],
     signup: ["Únete a CFT", "Crear cuenta", "Crea tu cuenta para acceder a tu espacio de cliente."],
-    "signup-otp": ["Confirma tu correo", "Verifica tu correo", "Escribe el código enviado a tu correo para activar tu cuenta."],
-    "recovery-email": ["Recuperación de cuenta", "Recuperar contraseña", "Escribe el correo asociado a tu cuenta para enviarte un código."],
-    "recovery-otp": ["Recuperación de cuenta", "Verifica el código", "Escribe el código enviado a tu correo para continuar."],
+    "recovery-email": ["Recuperación de cuenta", "Recuperar contraseña", "Escribe el correo asociado a tu cuenta para enviarte un enlace seguro."],
     "recovery-password": ["Recuperación de cuenta", "Crear nueva contraseña", "Elige una contraseña nueva para tu cuenta."]
   }[step];
 
@@ -122,16 +109,11 @@ function updateAuthStep(step) {
   confirmPasswordField.hidden = !needsConfirmation;
   confirmPasswordInput.disabled = !needsConfirmation;
   confirmPasswordInput.required = needsConfirmation;
-  otpField.hidden = !isOtp;
-  otpInput.disabled = !isOtp;
-  otpInput.required = isOtp;
   loginOptions.hidden = step !== "login";
 
-  if (step === "signup" || isSignupOtp) {
-    accountPrompt.innerHTML = isSignupOtp
-      ? ""
-      : '¿Ya tienes una cuenta? <a href="#iniciar-sesion" id="account-toggle">Inicia sesión</a>';
-    accountPrompt.hidden = isSignupOtp;
+  if (step === "signup") {
+    accountPrompt.innerHTML = '¿Ya tienes una cuenta? <a href="#iniciar-sesion" id="account-toggle">Inicia sesión</a>';
+    accountPrompt.hidden = false;
   } else if (isRecovery) {
     accountPrompt.innerHTML = step === "recovery-email"
       ? '¿Recordaste tu contraseña? <a href="#iniciar-sesion" id="account-toggle">Inicia sesión</a>'
@@ -140,14 +122,6 @@ function updateAuthStep(step) {
   } else {
     accountPrompt.innerHTML = '¿Aún no tienes cuenta? <a href="#registrarse" id="account-toggle">Regístrate</a>';
     accountPrompt.hidden = false;
-  }
-
-  if (isOtp) {
-    otpHelp.textContent = `Introduce el código de 6 dígitos enviado a ${emailInput.value.trim()}.`;
-    renderResendCooldown();
-  } else if (resendCooldownTimer) {
-    window.clearInterval(resendCooldownTimer);
-    resendCooldownTimer = null;
   }
 
   setMessage("");
@@ -208,52 +182,6 @@ function clearPersistentSession() {
   }
 }
 
-async function saveVerifiedSignup(supabase) {
-  const updates = {};
-  if (pendingSignupPassword) updates.password = pendingSignupPassword;
-  if (pendingSignupMetadata) updates.data = pendingSignupMetadata;
-
-  if (Object.keys(updates).length === 0) {
-    throw new Error("No se conservaron los datos del registro. Vuelve a registrarte.");
-  }
-
-  const { error } = await supabase.auth.updateUser(updates);
-  if (error) throw error;
-
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError) throw userError;
-  if (!userData.user) throw new Error("VERIFICATION_SESSION_MISSING");
-
-  const profileUpdates = {};
-  if (pendingSignupMetadata?.username) {
-    profileUpdates.username = pendingSignupMetadata.username;
-  }
-  if (pendingSignupMetadata?.phone) {
-    profileUpdates.phone = pendingSignupMetadata.phone;
-  }
-
-  const profileQuery = Object.keys(profileUpdates).length > 0
-    ? supabase
-      .from("profiles")
-      .update(profileUpdates)
-      .eq("id", userData.user.id)
-      .select("id")
-      .single()
-    : supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", userData.user.id)
-      .single();
-  const { error: profileError } = await profileQuery;
-  if (profileError) {
-    console.error("No se pudo guardar el perfil después de confirmar el correo:", profileError);
-    throw new Error("PROFILE_SAVE_FAILED");
-  }
-
-  pendingSignupPassword = "";
-  pendingSignupMetadata = null;
-}
-
 function showAuthError(error) {
   const code = String(error?.code || "").toLowerCase();
   const details = `${code} ${error?.message || ""}`.toLowerCase();
@@ -261,23 +189,11 @@ function showAuthError(error) {
   if (error?.message === "CONFIGURATION") {
     return "No se pudo configurar el acceso. Revisa la configuración pública de Supabase.";
   }
-  if (error?.message === "RECOVERY_SESSION_MISSING") {
-    return "El código se validó, pero no se pudo iniciar la sesión de recuperación. Solicita otro código e inténtalo de nuevo.";
-  }
-  if (error?.message === "VERIFICATION_SESSION_MISSING") {
-    return "El código se validó, pero no se inició la sesión para guardar los datos. Inténtalo de nuevo o contacta con soporte.";
-  }
-  if (error?.message === "PROFILE_SAVE_FAILED") {
-    return "El correo quedó confirmado, pero no se pudieron guardar los datos del perfil. Inicia sesión y vuelve a intentarlo o contacta con soporte.";
-  }
   if (/rate.?limit|too many requests|over_email_send_rate_limit|email rate limit/.test(details)) {
-    return "Se alcanzó el límite de envíos de códigos. Espera un momento antes de volver a intentarlo.";
+    return "Se alcanzó el límite de correos enviados. Espera un momento antes de volver a intentarlo.";
   }
   if (/email_not_confirmed|email not confirmed/.test(details)) {
-    return "Tu correo todavía no está confirmado. Solicita o introduce el código de verificación.";
-  }
-  if (/otp_expired|otp_invalid|invalid.*(otp|token)|expired.*(otp|token)|token.*expired/.test(details)) {
-    return "El código no es válido o ha expirado. Solicita uno nuevo e inténtalo otra vez.";
+    return "Tu correo todavía no está confirmado. Abre el enlace de confirmación que enviamos a tu correo.";
   }
   if (/invalid_credentials|invalid login credentials/.test(details) || error?.status === 400 || error?.status === 401) {
     return "El correo electrónico o la contraseña no son correctos.";
@@ -296,25 +212,6 @@ function showAuthError(error) {
   }
 
   return "No se pudo completar la solicitud. Inténtalo de nuevo en unos momentos.";
-}
-
-function renderResendCooldown() {
-  if (!authStep.endsWith("-otp")) return;
-  const remaining = Math.max(0, Math.ceil((resendCooldownUntil - Date.now()) / 1000));
-  resendButton.disabled = remaining > 0;
-  resendButton.textContent = remaining > 0 ? `Reenviar código (${remaining} s)` : "Reenviar código";
-
-  if (remaining === 0 && resendCooldownTimer) {
-    window.clearInterval(resendCooldownTimer);
-    resendCooldownTimer = null;
-  }
-}
-
-function startResendCooldown() {
-  resendCooldownUntil = Date.now() + 60_000;
-  if (resendCooldownTimer) window.clearInterval(resendCooldownTimer);
-  renderResendCooldown();
-  resendCooldownTimer = window.setInterval(renderResendCooldown, 1000);
 }
 
 function isUnconfirmedEmailError(error) {
@@ -375,11 +272,12 @@ form.addEventListener("submit", async (event) => {
         userMetadata.phone = `${phoneCountryCodeInput.value}${nationalPhoneNumber}`;
       }
 
-      const { data, error } = await supabase.auth.signInWithOtp({
+      const { data, error } = await supabase.auth.signUp({
         email,
+        password: passwordInput.value,
         options: {
-          shouldCreateUser: true,
-          data: userMetadata
+          data: userMetadata,
+          emailRedirectTo: CFT_URL
         }
       });
 
@@ -390,20 +288,13 @@ form.addEventListener("submit", async (event) => {
         throw error;
       }
       if (data.session) {
-        pendingSignupPassword = passwordInput.value;
-        pendingSignupMetadata = userMetadata;
-        await saveVerifiedSignup(supabase);
         clearPersistentSession();
         window.location.assign(CFT_URL);
         return;
       }
 
-      pendingSignupPassword = passwordInput.value;
-      pendingSignupMetadata = userMetadata;
-      updateAuthStep("signup-otp");
-      startResendCooldown();
-      setMessage("Te enviamos un código de 6 dígitos. Revisa tu correo y escríbelo aquí para confirmar la cuenta.", "success");
-      otpInput.focus();
+      updateAuthStep("login");
+      setMessage("Tu cuenta fue creada. Te enviamos un enlace de confirmación por correo; ábrelo para activar tu cuenta.", "success");
       return;
     }
 
@@ -415,11 +306,7 @@ form.addEventListener("submit", async (event) => {
 
       if (error) {
         if (isUnconfirmedEmailError(error)) {
-          pendingSignupPassword = passwordInput.value;
-          pendingSignupMetadata = null;
-          updateAuthStep("signup-otp");
-          setMessage("Tu correo todavía no está confirmado. Introduce el código enviado o reenvíalo cuando esté disponible.", "info");
-          otpInput.focus();
+          setMessage("Tu correo todavía no está confirmado. Abre el enlace de confirmación que enviamos a tu correo.", "info");
           return;
         }
         throw error;
@@ -430,37 +317,11 @@ form.addEventListener("submit", async (event) => {
     }
 
     if (authStep === "recovery-email") {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const redirectTo = new URL(window.location.pathname, window.location.origin).href;
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
       if (error) throw error;
 
-      updateAuthStep("recovery-otp");
-      startResendCooldown();
-      setMessage("Si existe una cuenta asociada, recibirás un código de recuperación en tu correo.", "success");
-      otpInput.focus();
-      return;
-    }
-
-    if (authStep === "signup-otp" || authStep === "recovery-otp") {
-      const verificationType = authStep === "signup-otp" ? "email" : "recovery";
-      const { data, error } = await supabase.auth.verifyOtp({
-        email,
-        token: otpInput.value.trim(),
-        type: verificationType
-      });
-      if (error) throw error;
-
-      if (authStep === "signup-otp") {
-        if (!data.session) throw new Error("VERIFICATION_SESSION_MISSING");
-        await saveVerifiedSignup(supabase);
-        clearPersistentSession();
-        window.location.assign(CFT_URL);
-        return;
-      }
-
-      if (!data.session) throw new Error("RECOVERY_SESSION_MISSING");
-      updateAuthStep("recovery-password");
-      setMessage("Correo verificado. Ahora puedes crear una contraseña nueva.", "success");
-      passwordInput.focus();
+      setMessage("Si existe una cuenta asociada, recibirás un enlace seguro para restablecer tu contraseña.", "success");
       return;
     }
 
@@ -493,51 +354,11 @@ confirmPasswordInput.addEventListener("input", () => {
   confirmPasswordInput.setCustomValidity("");
 });
 
-otpInput.addEventListener("input", () => {
-  otpInput.value = otpInput.value.replace(/\D/g, "").slice(0, 6);
-});
-
 forgotPasswordLink.addEventListener("click", (event) => {
   event.preventDefault();
   updateAuthStep("recovery-email");
-  setMessage("Escribe el correo asociado a tu cuenta para recibir un código.", "info");
+  setMessage("Escribe el correo asociado a tu cuenta para recibir un enlace seguro.", "info");
   emailInput.focus();
-});
-
-resendButton.addEventListener("click", async () => {
-  if (!authStep.endsWith("-otp") || resendButton.disabled) return;
-  resendButton.disabled = true;
-  resendButton.setAttribute("aria-busy", "true");
-  startResendCooldown();
-  setMessage("");
-
-  try {
-    const supabase = await getSupabaseClient();
-    const email = emailInput.value.trim();
-
-    if (authStep === "signup-otp") {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: true,
-          ...(pendingSignupMetadata ? { data: pendingSignupMetadata } : {})
-        }
-      });
-      if (error) throw error;
-    } else {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-      if (error) throw error;
-    }
-
-    startResendCooldown();
-    setMessage("Si la solicitud puede procesarse, recibirás un nuevo código en tu correo.", "success");
-  } catch (error) {
-    console.error("No se pudo reenviar el código:", error);
-    setMessage(showAuthError(error), "error");
-    renderResendCooldown();
-  } finally {
-    resendButton.removeAttribute("aria-busy");
-  }
 });
 
 async function initializeAuth() {
